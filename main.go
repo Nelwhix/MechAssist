@@ -34,7 +34,7 @@ const (
 var steamJson SteamJson
 func main() {
 	// units must be in MPa
-	newRankine_sup(0.01, 4, 400)
+	newRegenerative(4, 400, 0.4, 0.01)
 }
 
 func getSteamPropsByPressure_sat(pressureValue float64) []float64 {
@@ -161,17 +161,18 @@ func newRankine_sup(pressureCondenser float64, pressureBoiler float64, tempAfter
 	table.Render()
 }
 
-func pumpProcess(pressureCondenser float64, pressureBoiler float64) []float64 {
+func pumpProcess(inletPressure float64, exitPressure float64) []float64 {
 	var wp float64 // Work done at the pump
-	v := getSteamPropsByPressure_sat(pressureCondenser)[13]
-	wp = (v * (pressureBoiler - pressureCondenser)) * 1000
-	h1 := getSteamPropsByPressure_sat(pressureCondenser)[7]
+	steamProps := getSteamPropsByPressure_sat(inletPressure)
+	v := steamProps[Specific_Volume_f]
+	wp = (v * (exitPressure - inletPressure)) * 1000
+	h1 := steamProps[Enthalpy_f]
 	h2 := h1 + wp
 
 	return []float64{h1, h2, wp}
 }
 
-func newReheat(pressureBoiler float64, tempAfterBoiler float64, pressureAtReheat float64, pressureAtLowTurbine float64) {
+func newReheat(pressureBoiler float64, tempAfterBoiler float64, pressureAtReheat float64, pressureAfterLowTurbine float64) {
 	var inletSteamProps []float64
 	var exitSteamProps []float64
 
@@ -190,10 +191,93 @@ func newReheat(pressureBoiler float64, tempAfterBoiler float64, pressureAtReheat
 
 	// Low Pressure turbine
 	inletSteamProps = getSteamProps_sup(pressureAtReheat, tempAfterBoiler)
+	exitSteamProps = getSteamPropsByPressure_sat(0.01)
 	h5 := inletSteamProps[Enthalpy_sup]
 	s5 := inletSteamProps[Entropy_sup]
+	sf6 := exitSteamProps[Entropy_f]
+	sfg6 := exitSteamProps[Entropy_fg]
 
+	x6 := (s5 - sf6) / sfg6
 
+	h6 := exitSteamProps[Enthalpy_f] + x6 * exitSteamProps[Enthalpy_fg]
 
+	wt := whp + (h5 - h6)
 
+	// Pump
+	result := pumpProcess(pressureAfterLowTurbine, pressureBoiler)	
+	h2 := result[1]
+	wp := result[2]
+
+	// Boiler
+	qh := (h3 - h2) + (h5 - h4)
+
+	nth := ((wt - wp) / qh) * 100
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Process", "Inlet State", "Exit State", "Work done/Heat transfer"})
+	data := [][]string{
+		{"High Pressure Turbine", "P3 = " + strconv.FormatFloat(pressureBoiler, 'g', 5, 64) + "MPa" + " T3 = " + strconv.FormatFloat(tempAfterBoiler, 'g', 5, 64) + "C", "h4 = " + strconv.FormatFloat(h4, 'g', 5, 64) + "MPa" + " x4 = " + strconv.FormatFloat(x4, 'g', 5, 64), "Work Output: " + strconv.FormatFloat(whp, 'g', 5, 64) + "KJ/KG"},
+		{"Low Pressure Turbine", "P5 = " + strconv.FormatFloat(pressureAtReheat, 'g', 5, 64) + "MPa" + " T5 = " + strconv.FormatFloat(tempAfterBoiler, 'g', 5, 64) + "C", "h6 = " + strconv.FormatFloat(h6, 'g', 5, 64) + "MPa" + " x4 = " + strconv.FormatFloat(x6, 'g', 5, 64), "Work Output: " + strconv.FormatFloat((h5 - h6), 'g', 5, 64) + "KJ/KG"},
+		{"Pump", "P1 = " + strconv.FormatFloat(pressureAfterLowTurbine, 'g', 5, 64) + "MPa", "h2 = " + strconv.FormatFloat(h2, 'g', 5, 64) + "MPa", "Work Input: " + strconv.FormatFloat(wp, 'g', 5, 64) + "KJ/KG"},
+		{"Boiler", "P2 = " + strconv.FormatFloat(pressureBoiler, 'g', 5, 64) + "MPa " + "P4 = " + strconv.FormatFloat(pressureAtReheat, 'g', 5, 64) + "MPa", "Output from earlier steps", "Heat Added : " + strconv.FormatFloat(qh, 'g', 5, 64) + "KJ/KG"},
+	}
+
+	table.AppendBulk(data)
+	table.SetFooter([]string{"", "", "Efficiency of Cycle", strconv.FormatFloat(nth, 'g', 5, 64) + "%"})
+
+	table.Render()
+}
+
+func newRegenerative(pressureBoiler float64, tempAfterBoiler float64, pressureAtFeedwater float64, pressureAtCondenser float64) {
+	// Low Pressure Pump
+	result := pumpProcess(pressureAtCondenser, pressureAtFeedwater)
+	h2 := result[1]
+	wp1 := result[2]
+
+	// Turbine
+	inletTurbProps := getSteamProps_sup(pressureBoiler, tempAfterBoiler)
+	exitToFeed := getSteamPropsByPressure_sat(pressureAtFeedwater)
+	exitToCondenser := getSteamPropsByPressure_sat(pressureAtCondenser)
+	h5 := inletTurbProps[Enthalpy_sup]
+	s5 := inletTurbProps[Entropy_sup]
+	sf6 := exitToFeed[Entropy_f]
+	sfg6 := exitToFeed[Entropy_fg]
+	x6 := (s5 - sf6) / sfg6
+
+	h6 := exitToFeed[Enthalpy_f] + (x6 * exitToFeed[Enthalpy_fg])
+
+	sf7 := exitToCondenser[Entropy_f]
+	sfg7 := exitToCondenser[Entropy_fg]
+	x7 := (s5 - sf7) / sfg7
+
+	h7 := exitToCondenser[Enthalpy_f] + (x7 * exitToCondenser[Enthalpy_fg])
+
+	// Feedwater heater: y is the extraction fraction
+	h3 := exitToFeed[Enthalpy_f]
+	y := (h3 - h2) / (h6 - h2)
+	wt := (h5 - h6) + ((1 - y) * (h6 - h7))
+
+	// High Pressure Pump
+	result2 := pumpProcess(0.4, 4)
+	h4 := result2[1]
+	wp2 := result2[2]
+
+	// Boiler 
+	qh := h5 - h4
+	nth := ((wt - wp1 - wp2) / qh) * 100
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Process", "Inlet State", "Exit State", "Work done/Heat transfer"})
+	data := [][]string{
+		{"Low Pressure Pump", "P1 = " + strconv.FormatFloat(pressureAtCondenser, 'g', 5, 64) + "MPa", "h2 = " + strconv.FormatFloat(h2, 'g', 5, 64) + "MPa", "Work Input: " + strconv.FormatFloat(wp1, 'g', 5, 64) + "KJ/KG"},
+		{"Turbine", "P5 = " + strconv.FormatFloat(pressureBoiler, 'g', 5, 64) + "MPa" + " T5 = " + strconv.FormatFloat(tempAfterBoiler, 'g', 5, 64) + "C", "h6 = " + strconv.FormatFloat(h6, 'g', 5, 64) + "MPa " + "x6 = " + strconv.FormatFloat(x6, 'g', 4, 64) + " h7 = " + strconv.FormatFloat(h7, 'g', 5, 64) + "MPa" + " x7 = " + strconv.FormatFloat(x7, 'g', 5, 64), "Work Output: " + strconv.FormatFloat(wt, 'g', 5, 64) + "KJ/KG"},
+		{"FeedWater Heater", "States at Turbine and Low Pressure Pump", "y = " + strconv.FormatFloat(y, 'g', 4, 64), "N/A"},
+		{"High Pressure Pump", "P3 = " + strconv.FormatFloat(pressureAtFeedwater, 'g', 5, 64) + "MPa", "h4 = " + strconv.FormatFloat(h4, 'g', 5, 64) + "MPa", "Work Input: " + strconv.FormatFloat(wp2, 'g', 5, 64) + "KJ/KG"},
+		{"Boiler", "P4 = " + strconv.FormatFloat(pressureAtFeedwater, 'g', 5, 64) + "MPa ", "Same as Input into the Turbine", "Heat Added : " + strconv.FormatFloat(qh, 'g', 5, 64) + "KJ/KG"},
+	}
+
+	table.AppendBulk(data)
+	table.SetFooter([]string{"", "", "Efficiency of Cycle", strconv.FormatFloat(nth, 'g', 5, 64) + "%"})
+
+	table.Render()
 }
