@@ -25,5 +25,5 @@ The goal for this project is a simple web app that solves for the cycle efficien
     |                                 EFFICIENCY OF CYCLE     |           30.318%           |
     +-----------+---------------+-----------------------------+-----------------------------+
 ```
-Contributions:
+## Contributions:
     If you are a mechanical engineering or Chemistry student interested in extending the functionality, fork and contribute. Let's make something great!
