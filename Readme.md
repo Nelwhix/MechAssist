@@ -9,8 +9,9 @@ The goal for this project is a simple web app that solves for the cycle efficien
     3. go run main.go!
 
 ### Sample responses
-    The newRankine_sat method takes two pressure units, pressure at the condenser and pressure at the boiler respectively.
-    The sat keyword stands for saturated i.e saturated vapor entering the turbine. Currently working on functions for when superheated steam enters the turbine.
+    The newRankine_sat method takes two pressure units, pressure at the condenser and pressure
+     at the boiler respectively. The sat keyword stands for saturated i.e saturated vapor entering
+      the turbine. Currently working on functions for when superheated steam enters the turbine.
 ```
     newRankine_sat(0.01, 2)
 
@@ -26,4 +27,5 @@ The goal for this project is a simple web app that solves for the cycle efficien
     +-----------+---------------+-----------------------------+-----------------------------+
 ```
 ## Contributions:
-    If you are a mechanical engineering or Chemistry student interested in extending the functionality, fork and contribute. Let's make something great!
+    If you are a mechanical engineering or Chemistry student interested in extending the 
+    functionality, fork and contribute. Let's make something great!
