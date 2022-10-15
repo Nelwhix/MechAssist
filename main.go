@@ -2,12 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"os"
 	"strconv"
-
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -20,7 +18,7 @@ type SteamJson struct{
 var steamJson SteamJson
 func main() {
 	// units must be in MPa
-	fmt.Println(pumpProcess(0.4, 4))
+	newRankine_sat(0.01, 2)
 }
 
 func getSteamPropsByPressure_sat(pressureValue float64) []float64 {
