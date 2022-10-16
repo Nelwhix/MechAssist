@@ -34,7 +34,7 @@ const (
 var steamJson SteamJson
 func main() {
 	// units must be in MPa
-	newRegenerative(4, 400, 0.4, 0.01)
+	newRankine_sup(0.01, 3, 450)
 }
 
 func getSteamPropsByPressure_sat(pressureValue float64) []float64 {
@@ -105,9 +105,9 @@ func newRankine_sat(pressureCondenser float64, pressureBoiler float64)  {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Process", "Inlet State", "Exit State", "Work done/Heat transfer"})
 	data := [][]string{
-		{"Pump", "P1 = " + strconv.FormatFloat(pressureCondenser, 'g', 5, 64) + "MPa", "h2 = " + strconv.FormatFloat(h2, 'g', 5, 64) + "MPa", "Work Input: " + strconv.FormatFloat(wp, 'g', 5, 64) + "KJ/KG"},
-		{"Boiler", "P2 = " + strconv.FormatFloat(pressureBoiler, 'g', 5, 64) + "MPa", "h3 = " +strconv.FormatFloat(h3, 'g', 5, 64) + "MPa", "Heat Added : " + strconv.FormatFloat(qh, 'g', 5, 64) + "KJ/KG"},
-		{"Turbine", "State 3 known", "x4 = " + strconv.FormatFloat(x4, 'g', 5, 64) + "MPa " + "h4 = " + strconv.FormatFloat(h4, 'g', 5, 64) , "Work output : " + strconv.FormatFloat(wt, 'g', 5, 64) + "KJ/KG"},
+		{"Pump", "P1 = " + strconv.FormatFloat(pressureCondenser, 'g', 5, 64) + "MPa", "h2 = " + strconv.FormatFloat(h2, 'g', 5, 64) + "KJ/KG", "Work Input: " + strconv.FormatFloat(wp, 'g', 5, 64) + "KJ/KG"},
+		{"Boiler", "P2 = " + strconv.FormatFloat(pressureBoiler, 'g', 5, 64) + "MPa", "h3 = " +strconv.FormatFloat(h3, 'g', 5, 64) + "KJ/KG", "Heat Added : " + strconv.FormatFloat(qh, 'g', 5, 64) + "KJ/KG"},
+		{"Turbine", "State 3 known", "x4 = " + strconv.FormatFloat(x4, 'g', 5, 64) + " h4 = " + strconv.FormatFloat(h4, 'g', 5, 64) + "KJ/KG", "Work output : " + strconv.FormatFloat(wt, 'g', 5, 64) + "KJ/KG"},
 		{"Condenser", "State 4 known", "Output known", "Heat rejected : " + strconv.FormatFloat(ql, 'g', 5, 64) + "KJ/KG"},
 	}
 
