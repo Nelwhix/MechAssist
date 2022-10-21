@@ -1,12 +1,10 @@
 package main
 
 import (
-	"encoding/json"
-	"io"
-	"log"
 	"os"
 	"strconv"
 	"github.com/olekukonko/tablewriter"
+	//"fmt"
 )
 
 type SteamJson struct{
@@ -30,49 +28,9 @@ const (
 	  Entropy_sup = 6
 )
 
-
 var steamJson SteamJson
 func main() {
-	// units must be in MPa
-	newRankine_sup(0.01, 3, 450)
-}
-
-func getSteamPropsByPressure_sat(pressureValue float64) []float64 {
-	file, err := os.Open("./tables/saturated_by_pressure.json")
-
-	if err != nil {
-		log.Fatalf("Error opening file: %v", err)
-	}
-	defer file.Close()
-	byteValue, _ := io.ReadAll(file)
-
-	json.Unmarshal(byteValue, &steamJson)
-
-	for i := 0; i < len(steamJson.Data); i++ {
-		if pressureValue == steamJson.Data[i][0] {
-			return steamJson.Data[i]
-		}
-	}
-
-	return nil
-}
-
-func getSteamProps_sup(pressureValue float64, tempValue float64) []float64 {
-	file, err := os.Open("./tables/compressed_liquid_and_superheated_steam.json")
-
-	if err != nil {
-		log.Fatalf("Error opening file: %v", err)
-	}
-	defer file.Close()
-	byteValue, _ := io.ReadAll(file)
-	json.Unmarshal(byteValue, &steamJson)
-
-	for i := 0; i < len(steamJson.Data); i++ {
-		if pressureValue == steamJson.Data[i][0] && tempValue == steamJson.Data[i][1] {
-			return steamJson.Data[i]
-		}
-	}
-	return nil
+	// Pressure units must be in MPa, Temp units must be in C
 }
 
 // If saturated vapor entered the turbine
@@ -87,12 +45,12 @@ func newRankine_sat(pressureCondenser float64, pressureBoiler float64)  {
 	wp := pumpProcess(pressureCondenser, pressureBoiler)[2]
 	
 	// Boiler
-	h3 := getSteamPropsByPressure_sat(pressureBoiler)[8]
+	h3 := GetSteamPropsByPressure_sat(pressureBoiler)[8]
 	qh = h3 - h2
 
 	// Turbine
-	x4 = (getSteamPropsByPressure_sat(pressureBoiler)[11] - getSteamPropsByPressure_sat(pressureCondenser)[10]) / getSteamPropsByPressure_sat(pressureCondenser)[12]
-	h4 := h1  + x4 * getSteamPropsByPressure_sat(pressureCondenser)[9]
+	x4 = (GetSteamPropsByPressure_sat(pressureBoiler)[11] - GetSteamPropsByPressure_sat(pressureCondenser)[10]) / GetSteamPropsByPressure_sat(pressureCondenser)[12]
+	h4 := h1  + x4 * GetSteamPropsByPressure_sat(pressureCondenser)[9]
 
 	wt = h3 - h4
 
@@ -131,8 +89,8 @@ func newRankine_sup(pressureCondenser float64, pressureBoiler float64, tempAfter
 	wp := pumpProcess(pressureCondenser, pressureBoiler)[2]
 	
 	// Turbine
-	inletSteamProps := getSteamProps_sup(4, 400)
-	exitSteamProps := getSteamPropsByPressure_sat(0.01)
+	inletSteamProps := GetSteamProps_sup(pressureBoiler, tempAfterBoiler)
+	exitSteamProps := GetSteamPropsByPressure_sat(pressureCondenser)
 	h3 := inletSteamProps[Enthalpy_sup]
 	s3 := inletSteamProps[Entropy_sup]
 	sf4 := exitSteamProps[Entropy_f]
@@ -150,9 +108,9 @@ func newRankine_sup(pressureCondenser float64, pressureBoiler float64, tempAfter
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Process", "Inlet State", "Exit State", "Work done/Heat transfer"})
 	data := [][]string{
-		{"Pump", "P1 = " + strconv.FormatFloat(pressureCondenser, 'g', 5, 64) + "MPa", "h2 = " + strconv.FormatFloat(h2, 'g', 5, 64) + "MPa", "Work Input: " + strconv.FormatFloat(wp, 'g', 5, 64) + "KJ/KG"},
-		{"Turbine", "P3 = " + strconv.FormatFloat(pressureBoiler, 'g', 5, 64) + "MPa " + "T3 = " + strconv.FormatFloat(tempAfterBoiler, 'g', 5, 64) + "C", "x4 = " + strconv.FormatFloat(x4, 'g', 5, 64) + " h4 = " + strconv.FormatFloat(h4, 'g', 5, 64) + "MPa" , "Work output : " + strconv.FormatFloat(wt, 'g', 5, 64) + "KJ/KG"},
-		{"Boiler", "P2 = " + strconv.FormatFloat(pressureBoiler, 'g', 5, 64) + "MPa", "h3 = " +strconv.FormatFloat(h3, 'g', 5, 64) + "MPa", "Heat Added : " + strconv.FormatFloat(qh, 'g', 5, 64) + "KJ/KG"},
+		{"Pump", "P1 = " + strconv.FormatFloat(pressureCondenser, 'g', 5, 64) + "MPa", "h2 = " + strconv.FormatFloat(h2, 'g', 5, 64) + "KJ/KG", "Work Input: " + strconv.FormatFloat(wp, 'g', 5, 64) + "KJ/KG"},
+		{"Turbine", "P3 = " + strconv.FormatFloat(pressureBoiler, 'g', 5, 64) + "MPa " + "T3 = " + strconv.FormatFloat(tempAfterBoiler, 'g', 5, 64) + "C", "x4 = " + strconv.FormatFloat(x4, 'g', 5, 64) + " h4 = " + strconv.FormatFloat(h4, 'g', 5, 64) + "KJ/KG" , "Work output : " + strconv.FormatFloat(wt, 'g', 5, 64) + "KJ/KG"},
+		{"Boiler", "P2 = " + strconv.FormatFloat(pressureBoiler, 'g', 5, 64) + "MPa", "h3 = " +strconv.FormatFloat(h3, 'g', 5, 64) + "KJ/KG", "Heat Added : " + strconv.FormatFloat(qh, 'g', 5, 64) + "KJ/KG"},
 	}
 
 	table.AppendBulk(data)
@@ -163,7 +121,7 @@ func newRankine_sup(pressureCondenser float64, pressureBoiler float64, tempAfter
 
 func pumpProcess(inletPressure float64, exitPressure float64) []float64 {
 	var wp float64 // Work done at the pump
-	steamProps := getSteamPropsByPressure_sat(inletPressure)
+	steamProps := GetSteamPropsByPressure_sat(inletPressure)
 	v := steamProps[Specific_Volume_f]
 	wp = (v * (exitPressure - inletPressure)) * 1000
 	h1 := steamProps[Enthalpy_f]
@@ -177,8 +135,8 @@ func newReheat(pressureBoiler float64, tempAfterBoiler float64, pressureAtReheat
 	var exitSteamProps []float64
 
 	// high pressure turbine
-	inletSteamProps = getSteamProps_sup(pressureBoiler, tempAfterBoiler)
-	exitSteamProps = getSteamPropsByPressure_sat(pressureAtReheat)
+	inletSteamProps = GetSteamProps_sup(pressureBoiler, tempAfterBoiler)
+	exitSteamProps = GetSteamPropsByPressure_sat(pressureAtReheat)
 	h3 := inletSteamProps[Enthalpy_sup]
 	s3 := inletSteamProps[Entropy_sup]
 	sf4 := exitSteamProps[Entropy_f]
@@ -190,8 +148,8 @@ func newReheat(pressureBoiler float64, tempAfterBoiler float64, pressureAtReheat
 	whp := h3 - h4 // work done at high pressure turbine
 
 	// Low Pressure turbine
-	inletSteamProps = getSteamProps_sup(pressureAtReheat, tempAfterBoiler)
-	exitSteamProps = getSteamPropsByPressure_sat(0.01)
+	inletSteamProps = GetSteamProps_sup(pressureAtReheat, tempAfterBoiler)
+	exitSteamProps = GetSteamPropsByPressure_sat(0.01)
 	h5 := inletSteamProps[Enthalpy_sup]
 	s5 := inletSteamProps[Entropy_sup]
 	sf6 := exitSteamProps[Entropy_f]
@@ -235,9 +193,9 @@ func newRegenerative(pressureBoiler float64, tempAfterBoiler float64, pressureAt
 	wp1 := result[2]
 
 	// Turbine
-	inletTurbProps := getSteamProps_sup(pressureBoiler, tempAfterBoiler)
-	exitToFeed := getSteamPropsByPressure_sat(pressureAtFeedwater)
-	exitToCondenser := getSteamPropsByPressure_sat(pressureAtCondenser)
+	inletTurbProps := GetSteamProps_sup(pressureBoiler, tempAfterBoiler)
+	exitToFeed := GetSteamPropsByPressure_sat(pressureAtFeedwater)
+	exitToCondenser := GetSteamPropsByPressure_sat(pressureAtCondenser)
 	h5 := inletTurbProps[Enthalpy_sup]
 	s5 := inletTurbProps[Entropy_sup]
 	sf6 := exitToFeed[Entropy_f]
