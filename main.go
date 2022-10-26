@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
+
 	"github.com/olekukonko/tablewriter"
 	//"fmt"
 )
@@ -31,9 +33,12 @@ const (
 var steamJson SteamJson
 func main() {
 	// Pressure units must be in MPa, Temp units must be in C
+	fmt.Println(GetSteamPropsByPressure_sat(0.0125))
+	fmt.Println("Kj/Kg")
 }
 
-// If saturated vapor entered the turbine
+
+// If saturated vapor entered   the turbine
 func newRankine_sat(pressureCondenser float64, pressureBoiler float64)  {
 	var qh float64 // Heat added at the boiler
 	var wt float64 // Work done at the turbine
